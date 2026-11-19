@@ -12,13 +12,20 @@ const fields = {
   text: z.string(), targetLanguage: z.string(), sourceLanguage: z.string().optional(),
   provider: provider.optional(), sessionId: z.string().optional(), modelRoute: z.string().optional(),
 }
-const codec = (schema) => ({ mode: 'strict', create: () => schema, get jsonSchema() { return z.toJSONSchema(schema) } })
+const codec = (schema, type) => ({
+  mode: 'strict',
+  typeSymbol: `@yu1745/dsh-cot-translation#${type}`,
+  create: () => schema,
+  get jsonSchema() { return z.toJSONSchema(schema) },
+})
+const requestCodec = codec(z.object(fields), 'TranslationRequest')
+const strictRequestCodec = codec(z.strictObject(fields), 'TranslationRequest')
 const common = { service: 'cotTranslation', invocation: { kind: 'direct' }, cancellation: { parameter: 'signal' } }
 export const TYPERT_REMOTE = createTypertRemoteInfo({
   package: '@yu1745/dsh-cot-translation',
   methods: {
-    'cotTranslation/limits': { ...common, parameters: [], result: codec(limits) },
-    'cotTranslation/translate': { ...common, parameters: [{ name: 'request', source: 'json', codec: codec(z.object(fields)), strictCodec: codec(z.strictObject(fields)) }], result: codec(z.string()) },
+    'cotTranslation/limits': { ...common, parameters: [], result: codec(limits, 'CotTranslationSnapshot') },
+    'cotTranslation/translate': { ...common, parameters: [{ name: 'request', source: 'json', codec: requestCodec, strictCodec: strictRequestCodec }], result: codec(z.string(), 'translate:result') },
   },
 }, z)
 export default TYPERT_REMOTE

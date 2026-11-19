@@ -1,13 +1,16 @@
 {
   "name": "@yu1745/dsh-cot-translation",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Machine translation of expanded reasoning with a selectable DSH model",
   "author": "yu1745",
   "license": "MIT",
   "icon": "./icon.svg",
   "repository": "git+https://github.com/yu1745/dsh-cot-translation.git",
-  "engines": { "node": ">=22", "dsh": "0.2.2-rc.3" },
+  "engines": {
+    "node": ">=22",
+    "dsh": "0.2.2-rc.3"
+  },
   "exports": {
     ".": "./controller/lib/index.js",
     "./client": "./controller/lib/client.js",
@@ -19,15 +22,36 @@
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
-  "files": ["controller", "translator", "src", "docs", "locale", "icon.svg", "cordis.patch.yml", "build.mjs", "README.zh.md", "README.i18n.yaml"],
+  "files": [
+    "controller",
+    "translator",
+    "src",
+    "docs",
+    "locale",
+    "icon.svg",
+    "cordis.patch.yml",
+    "build.mjs",
+    "README.zh.md",
+    "README.i18n.yaml"
+  ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
-      "inject": ["@deepseek-ai/dsh-api-remotes", "@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-ui-chat", "@deepseek-ai/dsh-client-ui-plugin-manager", "@deepseek-ai/dsh-client-ui-settings"]
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
     }
   },
-  "scripts": { "build": "node build.mjs" },
+  "scripts": {
+    "build": "node build.mjs"
+  },
   "dependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
     "@deepseek-ai/schemastery": "~3.19.0",
@@ -41,5 +65,7 @@
     "@deepseek-ai/dsh-util-values": "0.2.2-rc.3",
     "zod": "4.6.6"
   },
-  "devDependencies": { "esbuild": "0.28.2" }
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
 }
