@@ -469,10 +469,10 @@ async function availablePaidProviders(ctx, config, signal, track) {
     __callDispose(_stack, _error, _hasError);
   }
 }
-async function assertConfiguredRoute(ctx, llm, route, signal, track) {
+async function assertConfiguredRoute(llm, route, signal, track) {
   const [provider, model] = route;
   const unavailable = () => new TranslationError("TRANSLATION_UNAVAILABLE", "Selected configured model is not advertised by its provider");
-  const registered = (runtime) => ctx.get("llm") === runtime && runtime.listProviders().some((row) => row.id === provider);
+  const registered = (runtime) => runtime.listProviders().some((row) => row.id === provider);
   if (llm === void 0 || !registered(llm)) throw unavailable();
   let advertised;
   try {
@@ -505,9 +505,9 @@ async function translateWithDeepSeek(ctx, spec, config, signal, track, log, iden
       if (spec.provider === "configured-model") {
         const route = parseModelRoute(spec.modelRoute);
         const [provider, model] = route;
-        const llm = await assertConfiguredRoute(ctx, ctx.get("llm"), route, timeout.signal, track);
+        const llm = await assertConfiguredRoute(ctx.get("llm"), route, timeout.signal, track);
         if (spec.text === "") return await emptyResult();
-        assertCurrent = () => assertConfiguredRoute(ctx, llm, route, timeout.signal, track);
+        assertCurrent = () => assertConfiguredRoute(llm, route, timeout.signal, track);
         prepared = await awaitMetadata(() => llm.prepareCall(
           { provider, model, maxTokens: config.deepseekMaxOutputTokens },
           timeout.signal,
@@ -578,10 +578,10 @@ async function translateWithDeepSeek(ctx, spec, config, signal, track, log, iden
       return text;
     } catch (error) {
       const expired = timeoutOf2(timeout.signal, "TRANSLATION_TIMEOUT");
-      if (expired !== void 0 && expired !== signal.reason) throw new TranslationError("TRANSLATION_TIMEOUT", "Native Flash translation timed out");
+      if (expired !== void 0 && expired !== signal.reason) throw new TranslationError("TRANSLATION_TIMEOUT", `${label} timed out`);
       timeout.signal.throwIfAborted();
       if (error instanceof TranslationError) throw error;
-      throw new TranslationError("TRANSLATION_REQUEST_FAILED", "Native Flash translation request failed");
+      throw new TranslationError("TRANSLATION_REQUEST_FAILED", `${label} request failed`);
     } finally {
       unwatch?.();
     }
@@ -611,6 +611,7 @@ var Translator = class extends Service {
     });
   }
   config;
+  static inject = ["llm"];
   static Config = z.object({
     provider: z.union(["google", "bing", "deepseek-account", "deepseek-official", "configured-model"]).default("bing"),
     googleEndpoint: z.transform(z.string(), endpoint).default("https://translate.googleapis.com/translate_a/single"),

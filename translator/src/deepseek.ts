@@ -149,11 +149,11 @@ export async function availablePaidProviders(ctx: Context, config: Config, signa
   return available
 }
 
-async function assertConfiguredRoute(ctx: Context, llm: LlmRuntime | undefined, route: ModelRoute,
+async function assertConfiguredRoute(llm: LlmRuntime | undefined, route: ModelRoute,
   signal: AbortSignal, track: (work: Promise<unknown>) => void): Promise<LlmRuntime> {
   const [provider, model] = route
   const unavailable = () => new TranslationError('TRANSLATION_UNAVAILABLE', 'Selected configured model is not advertised by its provider')
-  const registered = (runtime: LlmRuntime) => ctx.get('llm') === runtime && runtime.listProviders().some(row => row.id === provider)
+  const registered = (runtime: LlmRuntime) => runtime.listProviders().some(row => row.id === provider)
   if (llm === undefined || !registered(llm)) throw unavailable()
   let advertised: boolean
   try {
@@ -198,9 +198,9 @@ export async function translateWithDeepSeek(ctx: Context, spec: PaidTranslationS
     if (spec.provider === 'configured-model') {
       const route = parseModelRoute(spec.modelRoute)
       const [provider, model] = route
-      const llm = await assertConfiguredRoute(ctx, ctx.get('llm'), route, timeout.signal, track)
+      const llm = await assertConfiguredRoute(ctx.get('llm'), route, timeout.signal, track)
       if (spec.text === '') return await emptyResult()
-      assertCurrent = () => assertConfiguredRoute(ctx, llm, route, timeout.signal, track)
+      assertCurrent = () => assertConfiguredRoute(llm, route, timeout.signal, track)
       prepared = await awaitMetadata(() => llm.prepareCall({ provider, model, maxTokens: config.deepseekMaxOutputTokens },
         timeout.signal, (controls, info) => info.reasoning?.efforts.some(effort => effort.id === off)
           ? { ...controls, reasoningEffort: off } : controls), timeout.signal, track)
@@ -272,10 +272,10 @@ export async function translateWithDeepSeek(ctx: Context, spec: PaidTranslationS
     return text
   } catch (error) {
     const expired = timeoutOf(timeout.signal, 'TRANSLATION_TIMEOUT')
-    if (expired !== undefined && expired !== signal.reason) throw new TranslationError('TRANSLATION_TIMEOUT', 'Native Flash translation timed out')
+    if (expired !== undefined && expired !== signal.reason) throw new TranslationError('TRANSLATION_TIMEOUT', `${label} timed out`)
     timeout.signal.throwIfAborted()
     if (error instanceof TranslationError) throw error
-    throw new TranslationError('TRANSLATION_REQUEST_FAILED', 'Native Flash translation request failed')
+    throw new TranslationError('TRANSLATION_REQUEST_FAILED', `${label} request failed`)
   } finally {
     unwatch?.()
   }

@@ -51,6 +51,7 @@ function endpoint(value: string): string {
 
 /** One Host service with explicit routing, cancellation and quiescent unload. */
 export default class Translator extends Service {
+  static inject = ['llm']
   static Config = z.object({
     provider: z.union(['google', 'bing', 'deepseek-account', 'deepseek-official', 'configured-model'] as const).default('bing'),
     googleEndpoint: z.transform(z.string(), endpoint).default('https://translate.googleapis.com/translate_a/single'),
