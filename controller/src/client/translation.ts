@@ -46,8 +46,8 @@ export class ReasoningTranslation {
   private readonly controller = new AbortController()
   private readonly cache = new Map<string, string>()
   private fragments: Fragment[] = []
-  private pending = false
-  private failed = false
+  private readonly pending = new Set<string>()
+  private readonly failed = new Set<string>()
 
   /**
    * @param selection - explicit provider and resolved target language.
@@ -69,12 +69,11 @@ export class ReasoningTranslation {
    */
   update(text: string, running: boolean): void {
     this.fragments = reasoningFragments(text, running, this.maxTextChars)
-    this.emit()
-    void this.run()
+    this.run()
   }
 
-  /** Retry untranslated fragments after a failed request. */
-  retry(): void { this.failed = false; void this.run() }
+  /** Retry failed fragments without duplicating requests already in flight. */
+  retry(): void { this.failed.clear(); this.run() }
 
   /** Abort the disclosure's requests and suppress all later publications. */
   dispose(): void { this.controller.abort() }
@@ -87,27 +86,30 @@ export class ReasoningTranslation {
       const content = fragment.complete ? this.cache.get(fragment.text) ?? fragment.text : fragment.text
       return content + fragment.suffix
     }).join('')
-    this.publish({ text, pending: this.pending, failed: this.failed })
+    this.publish({ text,
+      pending: this.fragments.some(fragment => fragment.complete && this.pending.has(fragment.text)),
+      failed: this.fragments.some(fragment => fragment.complete && this.failed.has(fragment.text)),
+    })
   }
 
-  private async run(): Promise<void> {
-    if (this.pending || this.failed || this.isDisposed()) return
-    let next = this.fragments.find(fragment => fragment.complete && fragment.text.trim() !== '' && !this.cache.has(fragment.text))
-    if (next === undefined) return
-    this.pending = true
+  private run(): void {
+    if (this.isDisposed()) return
+    for (const { text, complete } of this.fragments) {
+      if (!complete || text.trim() === '' || this.cache.has(text) || this.pending.has(text) || this.failed.has(text)) continue
+      this.pending.add(text)
+      void this.translateFragment(text)
+    }
     this.emit()
+  }
+
+  private async translateFragment(text: string): Promise<void> {
     try {
-      while (next !== undefined) {
-        const translated = await this.translate({ ...this.selection, text: next.text }, this.controller.signal)
-        if (this.isDisposed()) return
-        this.cache.set(next.text, translated)
-        this.emit()
-        next = this.fragments.find(fragment => fragment.complete && fragment.text.trim() !== '' && !this.cache.has(fragment.text))
-      }
+      const translated = await this.translate({ ...this.selection, text }, this.controller.signal)
+      if (!this.isDisposed()) this.cache.set(text, translated)
     } catch (_error) {
-      if (!this.isDisposed()) this.failed = true
+      if (!this.isDisposed()) this.failed.add(text)
     } finally {
-      this.pending = false
+      this.pending.delete(text)
       this.emit()
     }
   }

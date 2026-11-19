@@ -263,8 +263,8 @@ var ReasoningTranslation = class {
   controller = new AbortController();
   cache = /* @__PURE__ */ new Map();
   fragments = [];
-  pending = false;
-  failed = false;
+  pending = /* @__PURE__ */ new Set();
+  failed = /* @__PURE__ */ new Set();
   /**
    * Adopt the current source and enqueue newly completed fragments.
    * @param text - current original reasoning.
@@ -272,13 +272,12 @@ var ReasoningTranslation = class {
    */
   update(text, running) {
     this.fragments = reasoningFragments(text, running, this.maxTextChars);
-    this.emit();
-    void this.run();
+    this.run();
   }
-  /** Retry untranslated fragments after a failed request. */
+  /** Retry failed fragments without duplicating requests already in flight. */
   retry() {
-    this.failed = false;
-    void this.run();
+    this.failed.clear();
+    this.run();
   }
   /** Abort the disclosure's requests and suppress all later publications. */
   dispose() {
@@ -293,26 +292,29 @@ var ReasoningTranslation = class {
       const content = fragment.complete ? this.cache.get(fragment.text) ?? fragment.text : fragment.text;
       return content + fragment.suffix;
     }).join("");
-    this.publish({ text, pending: this.pending, failed: this.failed });
+    this.publish({
+      text,
+      pending: this.fragments.some((fragment) => fragment.complete && this.pending.has(fragment.text)),
+      failed: this.fragments.some((fragment) => fragment.complete && this.failed.has(fragment.text))
+    });
   }
-  async run() {
-    if (this.pending || this.failed || this.isDisposed()) return;
-    let next = this.fragments.find((fragment) => fragment.complete && fragment.text.trim() !== "" && !this.cache.has(fragment.text));
-    if (next === void 0) return;
-    this.pending = true;
+  run() {
+    if (this.isDisposed()) return;
+    for (const { text, complete } of this.fragments) {
+      if (!complete || text.trim() === "" || this.cache.has(text) || this.pending.has(text) || this.failed.has(text)) continue;
+      this.pending.add(text);
+      void this.translateFragment(text);
+    }
     this.emit();
+  }
+  async translateFragment(text) {
     try {
-      while (next !== void 0) {
-        const translated = await this.translate({ ...this.selection, text: next.text }, this.controller.signal);
-        if (this.isDisposed()) return;
-        this.cache.set(next.text, translated);
-        this.emit();
-        next = this.fragments.find((fragment) => fragment.complete && fragment.text.trim() !== "" && !this.cache.has(fragment.text));
-      }
+      const translated = await this.translate({ ...this.selection, text }, this.controller.signal);
+      if (!this.isDisposed()) this.cache.set(text, translated);
     } catch (_error) {
-      if (!this.isDisposed()) this.failed = true;
+      if (!this.isDisposed()) this.failed.add(text);
     } finally {
-      this.pending = false;
+      this.pending.delete(text);
       this.emit();
     }
   }
