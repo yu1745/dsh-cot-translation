@@ -127,7 +127,7 @@ export default class CotTranslationController extends TypertRemoteService {
       const provider = this.config.provider.get()
       const code = error instanceof TranslationError ? error.code : 'UNEXPECTED_ERROR'
       this.ctx.logger.warn(`Reasoning translation failed (stage=${stage}, provider=${provider}, code=${code})`)
-      throw new RemoteError('cotTranslation/failed', 'Translation failed', {})
+      throw new RemoteError('cotTranslation/failed', 'Translation failed', { stage, code })
     }
   }
 
