@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "思考过程机器翻译（自选模型）",
+    "description": "用 DSH 中已配置的模型翻译展开的思考内容，支持切回原文。若已启用官方版，请先停用。",
+    "detail": "docs/DETAIL.zh.md"
+  }
+}

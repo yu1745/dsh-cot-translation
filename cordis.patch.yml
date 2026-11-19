@@ -1,0 +1,9 @@
+- insert:
+    - id: yu1745-translator
+      name: '@yu1745/dsh-cot-translation/translator'
+    - id: yu1745-cot-translation
+      name: '@yu1745/dsh-cot-translation'
+      config:
+        provider: bing
+        targetLanguage: auto
+        modelRoute: ''

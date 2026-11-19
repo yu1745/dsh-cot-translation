@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Reasoning translation with a selectable model",
+    "description": "Translate expanded reasoning with a model configured in DSH and switch back to the original at any time. Disable the official bundle before enabling this one.",
+    "detail": "docs/DETAIL.md"
+  }
+}
