@@ -164,16 +164,19 @@ var CotTranslationController = class extends (_a = TypertRemoteService, _limits_
   }
   async translate(request, signal) {
     signal.throwIfAborted();
+    let stage = "resolve-selection";
     try {
       var _stack = [];
       try {
         const spec = this.resolveSelected(request);
+        stage = "translate";
         try {
           return await this.ctx.translator.translate(spec, signal);
         } catch (error) {
           if (!(error instanceof TranslationError) || error.code !== "TRANSLATION_SESSION_INACTIVE" || spec.sessionId === void 0) throw error;
         }
         signal.throwIfAborted();
+        stage = "activate-session";
         const activation = this.ctx.sessionController.resolveAgent(spec.sessionId).then((result) => {
           if ("error" in result) throw result.error;
         }).catch((error) => {
@@ -186,14 +189,20 @@ var CotTranslationController = class extends (_a = TypertRemoteService, _limits_
         }));
         await Promise.race([activation, cancelled.promise]);
         signal.throwIfAborted();
-        return await this.ctx.translator.translate(this.resolveSelected({ ...request, provider: spec.provider }), signal);
+        stage = "resolve-selection-after-activation";
+        const retry = this.resolveSelected({ ...request, provider: spec.provider });
+        stage = "translate-after-activation";
+        return await this.ctx.translator.translate(retry, signal);
       } catch (_) {
         var _error = _, _hasError = true;
       } finally {
         __callDispose(_stack, _error, _hasError);
       }
-    } catch (_error2) {
+    } catch (error) {
       signal.throwIfAborted();
+      const provider = this.config.provider.get();
+      const code = error instanceof TranslationError ? error.code : "UNEXPECTED_ERROR";
+      this.ctx.logger.warn(`Reasoning translation failed (stage=${stage}, provider=${provider}, code=${code})`);
       throw new RemoteError("cotTranslation/failed", "Translation failed", {});
     }
   }
