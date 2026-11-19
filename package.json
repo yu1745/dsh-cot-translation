@@ -1,6 +1,6 @@
 {
   "name": "@yu1745/dsh-cot-translation",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "Machine translation of expanded reasoning with a selectable DSH model",
   "author": "yu1745",
